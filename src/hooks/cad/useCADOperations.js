@@ -22,6 +22,7 @@ export function useCADOperations(ctx) {
     fontCache, setGcodePreview, setAddingTab, tabMode, setTabMode,
     kerfWidth, setBreakMode, camera,
     setScissorsMode, scissorsFirst, setScissorsFirst,
+    setShowCuttingPath,
   } = ctx;
 
   const openDialog = (title, inputs, callback, options = null) => {
@@ -552,6 +553,7 @@ export function useCADOperations(ctx) {
     const newDistance = totalTravel(optimized);
     setEntities(optimized);
     addToHistory(optimized);
+    if (typeof setShowCuttingPath === 'function') setShowCuttingPath(true);
 
     if (originalDistance > 0.01) {
       const reduction = Math.max(0, Math.round((1 - newDistance / originalDistance) * 100));
