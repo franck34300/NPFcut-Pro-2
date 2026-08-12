@@ -20,6 +20,8 @@ const labelMap = {
   spacingX: 'Espacement X (mm)',
   spacingY: 'Espacement Y (mm)',
   startAngle: 'Angle départ (°)',
+  tolerance: 'Tolérance de simplification (mm)',
+  passes: 'Passes de lissage (0-5)',
 };
 
 export default function Dialog({
