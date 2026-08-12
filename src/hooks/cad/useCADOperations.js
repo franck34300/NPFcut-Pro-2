@@ -1369,6 +1369,7 @@ export function useCADOperations(ctx) {
       const result = importDXFModule(fileContent);
       const updated = [...entities, ...result.newEntities];
       setEntities(updated); addToHistory(updated);
+      if (typeof setShowCuttingPath === 'function') setShowCuttingPath(false);
       showToast(result.message, 'success');
     } catch (error) {
       showToast('❌ Erreur lors de l\'import DXF', 'error');
@@ -1386,6 +1387,7 @@ export function useCADOperations(ctx) {
       reader.onload = (event) => {
         const result = parseMachineTXT(event.target.result);
         setEntities(result.entities); addToHistory(result.entities);
+        if (typeof setShowCuttingPath === 'function') setShowCuttingPath(false);
         showToast(`✅ ${result.count} contours importés`, 'success');
       };
       reader.readAsText(file);
