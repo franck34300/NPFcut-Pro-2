@@ -66,6 +66,7 @@ export default function Toolbar({
         <button onClick={onSimulation} disabled={entityCount === 0} className="px-3 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:opacity-30 text-white rounded font-bold transition-colors text-xs flex items-center gap-1" title="Simulation parcours de découpe"><Play size={12} /> SIM</button>
         <button onClick={actions.cleanIsolatedPoints} className={btnSm('bg-red-600', 'hover:bg-red-700')} title="Nettoyer points isolés">🧹 Clean</button>
         <button onClick={actions.filletCorners} className={btnSm('bg-blue-700', 'hover:bg-blue-600')} title="Arrondir angles">⌒</button>
+        <button onClick={actions.smoothSelectedShape} className={btnSm('bg-teal-600', 'hover:bg-teal-700')} title="Lisser la forme (simplifie le bruit + arrondit en douceur)">〰️ Lisser</button>
         <button onClick={actions.fixJoints} className="px-3 py-2 bg-zinc-800 text-zinc-400 rounded hover:bg-zinc-700 transition-colors font-bold text-xs" title="Fixer joints">🧲</button>
         <button onClick={actions.explodePath} className="px-3 py-2 bg-zinc-800 text-zinc-400 rounded hover:bg-zinc-700 transition-colors font-bold text-xs" title="Éclater (X)">💥</button>
         <button onClick={actions.convertTextToPath} className="px-3 py-2 bg-zinc-800 text-zinc-400 rounded hover:bg-zinc-700 transition-colors font-bold text-xs" title="Convertir texte en contours">A→</button>
