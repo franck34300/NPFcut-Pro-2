@@ -61,7 +61,7 @@ export default function Toolbar({
         <button onClick={actions.removeLeadIns} className={btnSm('bg-red-600', 'hover:bg-red-700')} title="Supprimer entrées">✕ IN</button>
         <button onClick={actions.addLeadOuts} className={btnSm('bg-blue-600', 'hover:bg-blue-700')} title="Ajouter sorties (Lead-Out)">↗️ OUT</button>
         <button onClick={actions.removeLeadOuts} className={btnSm('bg-red-600', 'hover:bg-red-700')} title="Supprimer sorties">✕ OUT</button>
-        <button onClick={actions.sortEntitiesInsideOut} className={btnSm('bg-purple-600', 'hover:bg-purple-700')} title="Trier intérieur → extérieur">🎯 Tri</button>
+        <button onClick={actions.optimizeCuttingOrder} className={btnSm('bg-emerald-600', 'hover:bg-emerald-700')} title="Optimiser l'ordre de découpe (trous avant contours + trajets minimisés)">🧭 Optim</button>
         <button onClick={() => setShowCuttingPath(!showCuttingPath)} className={`px-3 py-2 text-white rounded font-bold transition-colors text-xs ${showCuttingPath ? 'bg-cyan-600 hover:bg-cyan-700' : 'bg-zinc-700 hover:bg-zinc-600'}`} title="Prévisualiser parcours">🛤️ {showCuttingPath ? 'ON' : 'OFF'}</button>
         <button onClick={onSimulation} disabled={entityCount === 0} className="px-3 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:opacity-30 text-white rounded font-bold transition-colors text-xs flex items-center gap-1" title="Simulation parcours de découpe"><Play size={12} /> SIM</button>
         <button onClick={actions.cleanIsolatedPoints} className={btnSm('bg-red-600', 'hover:bg-red-700')} title="Nettoyer points isolés">🧹 Clean</button>
