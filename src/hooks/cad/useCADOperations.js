@@ -12,7 +12,7 @@ import { FONT_URLS, DEFAULT_FONT_URL } from '@/lib/fonts';
 import { importDXF as importDXFModule, exportDXF as exportDXFModule } from '@/lib/dxf';
 import { exportGCode as exportGCodeModule } from '@/lib/gcode';
 import { parseMachineTXT } from '@/lib/txtImport';
- 
+
 export function useCADOperations(ctx) {
   const {
     entities, setEntities, addToHistory, showToast, getSelectionBBox,
@@ -23,7 +23,7 @@ export function useCADOperations(ctx) {
     kerfWidth, setBreakMode, camera,
     setScissorsMode, scissorsFirst, setScissorsFirst,
   } = ctx;
- 
+
   const openDialog = (title, inputs, callback, options = null) => {
     setDialogTitle(title);
     setDialogInputs(inputs);
@@ -32,11 +32,11 @@ export function useCADOperations(ctx) {
     setDialogCallback(() => callback);
     setDialogOpen(true);
   };
- 
+
   // ════════════════════════════════════════════════════
   // GEOMETRY OPERATIONS
   // ════════════════════════════════════════════════════
- 
+
   const createBisector = () => {
     const selectedLines = entities.filter(e => e.selected && e.type === 'line');
     if (selectedLines.length !== 2) {
@@ -76,7 +76,7 @@ export function useCADOperations(ctx) {
     addToHistory(newEntities);
     showToast('✅ 2 bissectrices créées', 'success');
   };
- 
+
   const extendLines = () => {
     const selectedLines = entities.filter(e => e.selected && e.type === 'line');
     if (selectedLines.length === 0) { showToast('⚠️ Sélectionnez au moins une ligne', 'warning'); return; }
@@ -100,7 +100,7 @@ export function useCADOperations(ctx) {
       showToast(`✅ ${selectedLines.length} ligne(s) prolongée(s) de ${d}mm`, 'success');
     });
   };
- 
+
   const reverseArc = () => {
     const selectedArcs = entities.filter(e => e.selected && e.type === 'arc');
     if (selectedArcs.length === 0) { showToast('⚠️ Sélectionnez au moins un arc', 'warning'); return; }
@@ -111,7 +111,7 @@ export function useCADOperations(ctx) {
     setEntities(updated); addToHistory(updated);
     showToast(`✅ ${selectedArcs.length} arc(s) inversé(s) !`, 'success');
   };
- 
+
   const breakAtIntersection = () => {
     let workingEntities = [];
     entities.forEach(data => {
@@ -126,7 +126,7 @@ export function useCADOperations(ctx) {
         workingEntities.push(data);
       }
     });
- 
+
     let finalEntities = [];
     workingEntities.forEach((data, index) => {
       const entity = recreateEntity(data);
@@ -140,9 +140,9 @@ export function useCADOperations(ctx) {
           if (!intersectionPoints.some(p => distance(p, point) < 0.01)) intersectionPoints.push(point);
         });
       });
- 
+
       if (intersectionPoints.length === 0) { finalEntities.push(data); return; }
- 
+
       if (entity.type === 'line') {
         const points = [entity.start, ...intersectionPoints, entity.end];
         points.sort((a, b) => distance(entity.start, a) - distance(entity.start, b));
@@ -185,7 +185,7 @@ export function useCADOperations(ctx) {
         }
       } else { finalEntities.push(data); }
     });
- 
+
     const circlesWithIntersections = workingEntities.filter((data, index) => {
       if (data.type !== 'circle') return false;
       const entity = recreateEntity(data);
@@ -198,7 +198,7 @@ export function useCADOperations(ctx) {
       });
       return has;
     }).length;
- 
+
     setEntities(finalEntities);
     addToHistory(finalEntities);
     const totalBefore = workingEntities.length, totalAfter = finalEntities.length;
@@ -208,11 +208,11 @@ export function useCADOperations(ctx) {
       showToast(`✅ Entités brisées: ${totalBefore} → ${totalAfter}`, 'success');
     }
   };
- 
+
   // ════════════════════════════════════════════════════
   // TRANSFORM OPERATIONS
   // ════════════════════════════════════════════════════
- 
+
   const mirrorHorizontal = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -236,7 +236,7 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast(`✅ ${mirrored.length} miroir ↕`, 'success');
   };
- 
+
   const mirrorVertical = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -260,7 +260,7 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast(`✅ ${mirrored.length} miroir ↔`, 'success');
   };
- 
+
   const arrayRectangular = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -288,7 +288,7 @@ export function useCADOperations(ctx) {
       showToast(`✅ ${copies.length} copies (${values.rows}×${values.cols})`, 'success');
     });
   };
- 
+
   const arrayCircular = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -322,11 +322,11 @@ export function useCADOperations(ctx) {
       showToast(`✅ ${copies.length} copies circulaires`, 'success');
     });
   };
- 
+
   // ════════════════════════════════════════════════════
   // CAM OPERATIONS (Tabs, Lead-in/out, Sort)
   // ════════════════════════════════════════════════════
- 
+
   const addTabs = () => {
     const selected = entities.filter(e => e.selected && (e.type === 'circle' || e.type === 'rectangle' || (e.type === 'path' && e.closed)));
     if (selected.length === 0) { showToast('⚠️ Sélectionnez un contour fermé', 'warning'); return; }
@@ -345,12 +345,12 @@ export function useCADOperations(ctx) {
           const tl = entity.topLeft;
           points = [{ x: tl.x, y: tl.y }, { x: tl.x + entity.width, y: tl.y }, { x: tl.x + entity.width, y: tl.y + entity.height }, { x: tl.x, y: tl.y + entity.height }];
         } else if (entity.type === 'path') { points = [...entity.points]; }
- 
+
         let totalLen = 0;
         const lengths = [0];
         for (let i = 1; i < points.length; i++) { totalLen += distance(points[i-1], points[i]); lengths.push(totalLen); }
         if (entity.type === 'circle' || entity.closed) { totalLen += distance(points[points.length-1], points[0]); }
- 
+
         const cutPoints = [];
         for (let i = 0; i < values.count; i++) {
           const cutPos = (i / values.count) * totalLen;
@@ -358,7 +358,7 @@ export function useCADOperations(ctx) {
           cutPoints.push({ pos: cutPos + values.width, type: 'end' });
         }
         cutPoints.sort((a, b) => a.pos - b.pos);
- 
+
         const cutCoords = cutPoints.map(cp => {
           for (let i = 1; i < lengths.length; i++) {
             if (cp.pos <= lengths[i]) {
@@ -369,7 +369,7 @@ export function useCADOperations(ctx) {
           }
           return points[points.length - 1];
         });
- 
+
         for (let i = 0; i < values.count; i++) {
           const startIdx = i * 2 + 1;
           const endIdx = ((i + 1) * 2) % cutCoords.length;
@@ -394,14 +394,14 @@ export function useCADOperations(ctx) {
       showToast(`✅ ${newEntities.length} entités créées`, 'success');
     });
   };
- 
+
   const addTab = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length !== 1) { showToast('⚠️ Sélectionnez UNE seule entité', 'warning'); return; }
     showToast('👉 Cliquez où vous voulez placer le pont', 'info');
     setTabMode(true);
   };
- 
+
   const parallelOffset = () => {
     const selected = entities.find(e => e.selected);
     if (!selected) { showToast('⚠️ Sélectionnez une ligne ou un contour'); return; }
@@ -430,7 +430,7 @@ export function useCADOperations(ctx) {
       setEntities(updated); addToHistory(updated); setDialogOpen(false);
     }, ['Gauche', 'Droite', 'Haut', 'Bas']);
   };
- 
+
   const circlesAtIntersections = () => {
     openDialog('Cercles aux intersections', { diameter: 5 }, (values) => {
       const diameter = values.diameter;
@@ -459,7 +459,7 @@ export function useCADOperations(ctx) {
       showToast(`✅ ${newCircles.length} cercle(s) créé(s)`, 'success');
     });
   };
- 
+
   const sortEntitiesInsideOut = () => {
     const entitiesWithSize = entities.map(data => {
       const entity = recreateEntity(data);
@@ -485,11 +485,86 @@ export function useCADOperations(ctx) {
     setEntities(sorted); addToHistory(sorted);
     showToast('✅ Tri : intérieur → extérieur', 'success');
   };
- 
+
+  // Point de départ / fin approximatifs d'une entité (pour estimer les déplacements à vide)
+  const getEntityStart = (entity) => {
+    if (entity.type === 'line') return entity.start;
+    if (entity.type === 'circle') return { x: entity.center.x + entity.radius, y: entity.center.y };
+    if (entity.type === 'arc') return { x: entity.center.x + entity.radius * Math.cos(entity.startAngle), y: entity.center.y + entity.radius * Math.sin(entity.startAngle) };
+    if (entity.type === 'path' && entity.points.length > 0) return entity.points[0];
+    if (entity.type === 'rectangle') return entity.topLeft;
+    return { x: 0, y: 0 };
+  };
+  const getEntityEnd = (entity) => {
+    if (entity.type === 'line') return entity.end;
+    if (entity.type === 'circle') return { x: entity.center.x + entity.radius, y: entity.center.y };
+    if (entity.type === 'arc') return { x: entity.center.x + entity.radius * Math.cos(entity.endAngle), y: entity.center.y + entity.radius * Math.sin(entity.endAngle) };
+    if (entity.type === 'path' && entity.points.length > 0) return entity.closed ? entity.points[0] : entity.points[entity.points.length - 1];
+    if (entity.type === 'rectangle') return entity.topLeft;
+    return { x: 0, y: 0 };
+  };
+
+  // Tri glouton (plus proche voisin) minimisant les déplacements à vide entre découpes,
+  // tout en gardant les trous coupés avant leur contour extérieur (sécurité de découpe).
+  const optimizeCuttingOrder = () => {
+    if (entities.length < 2) { showToast('⚠️ Rien à optimiser', 'warning'); return; }
+
+    // Distance totale de déplacement pour un ordre donné (pour mesurer le gain)
+    const totalTravel = (list) => {
+      let total = 0, pos = { x: 0, y: 0 };
+      list.forEach(data => {
+        const entity = recreateEntity(data);
+        if (!entity) return;
+        total += distance(pos, getEntityStart(entity));
+        pos = getEntityEnd(entity);
+      });
+      return total;
+    };
+    const originalDistance = totalTravel(entities);
+
+    const holes = entities.filter(data => isEntityInsideAnother(data, entities));
+    const outers = entities.filter(data => !isEntityInsideAnother(data, entities));
+
+    const nearestNeighborOrder = (list, startPos) => {
+      const remaining = [...list];
+      const ordered = [];
+      let pos = startPos;
+      while (remaining.length > 0) {
+        let bestIdx = 0, bestDist = Infinity;
+        remaining.forEach((data, idx) => {
+          const entity = recreateEntity(data);
+          if (!entity) return;
+          const d = distance(pos, getEntityStart(entity));
+          if (d < bestDist) { bestDist = d; bestIdx = idx; }
+        });
+        const [chosen] = remaining.splice(bestIdx, 1);
+        ordered.push(chosen);
+        const chosenEntity = recreateEntity(chosen);
+        if (chosenEntity) pos = getEntityEnd(chosenEntity);
+      }
+      return { ordered, endPos: pos };
+    };
+
+    const holesResult = nearestNeighborOrder(holes, { x: 0, y: 0 });
+    const outersResult = nearestNeighborOrder(outers, holesResult.endPos);
+    const optimized = [...holesResult.ordered, ...outersResult.ordered];
+
+    const newDistance = totalTravel(optimized);
+    setEntities(optimized);
+    addToHistory(optimized);
+
+    if (originalDistance > 0.01) {
+      const reduction = Math.max(0, Math.round((1 - newDistance / originalDistance) * 100));
+      showToast(`✅ Ordre optimisé : trajets à vide réduits de ${reduction}% (${Math.round(originalDistance)} → ${Math.round(newDistance)} mm)`, 'success');
+    } else {
+      showToast('✅ Ordre de découpe optimisé', 'success');
+    }
+  };
+
   // ════════════════════════════════════════════════════
   // LEAD-IN / LEAD-OUT
   // ════════════════════════════════════════════════════
- 
+
   const isEntityInsideAnother = (entityData, allEntities) => {
     const entity = recreateEntity(entityData);
     if (!entity) return false;
@@ -530,7 +605,7 @@ export function useCADOperations(ctx) {
     }
     return false;
   };
- 
+
   const addLeadIns = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -575,7 +650,7 @@ export function useCADOperations(ctx) {
       showToast(`✅ Entrées ajoutées (${d}mm)`, 'success');
     });
   };
- 
+
   const removeLeadIns = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -586,7 +661,7 @@ export function useCADOperations(ctx) {
     setEntities(updated); addToHistory(updated);
     showToast('✅ Entrées supprimées', 'success');
   };
- 
+
   const addLeadOuts = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -614,7 +689,7 @@ export function useCADOperations(ctx) {
     if (added === 0) { showToast('⚠️ Ajoutez d\'abord des entrées (↘️ IN)', 'warning'); }
     else { setEntities(updated); addToHistory(updated); showToast(`✅ ${added} sortie(s) ajoutée(s)`, 'success'); }
   };
- 
+
   const removeLeadOuts = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -625,11 +700,11 @@ export function useCADOperations(ctx) {
     setEntities(updated); addToHistory(updated);
     showToast('✅ Sorties supprimées', 'success');
   };
- 
+
   // ════════════════════════════════════════════════════
   // FUSION & CONTOUR OPERATIONS
   // ════════════════════════════════════════════════════
- 
+
   const extractOuterContour = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -672,14 +747,14 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast('✅ Contour externe créé (' + hull.length + ' points)', 'success');
   };
- 
+
   const startManualFusion = () => {
     setManualFusionMode(true);
     setManualFusionPoints([]);
     setManualFusionEntities([]);
     showToast('🖱️ Cliquez sur les segments dans l\'ordre. ESC pour annuler, Entrée pour terminer.', 'info');
   };
- 
+
   const finishManualFusion = () => {
     if (manualFusionEntities.length < 2) { showToast('⚠️ Sélectionnez au moins 2 segments', 'warning'); setManualFusionMode(false); return; }
     const allPoints = [];
@@ -727,7 +802,7 @@ export function useCADOperations(ctx) {
     setManualFusionMode(false); setManualFusionPoints([]); setManualFusionEntities([]);
     showToast('✅ Fusion manuelle terminée (' + finalPoints.length + ' points)', 'success');
   };
- 
+
   const fusionLignes = () => {
     const selected = entities.filter(e => e.selected && e.type === 'line');
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des lignes à fusionner', 'warning'); return; }
@@ -773,7 +848,7 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast('✅ ' + paths.length + ' contour(s) créé(s) depuis ' + selected.length + ' lignes', 'success');
   };
- 
+
   const groupLinesIntoPaths = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités', 'warning'); return; }
@@ -802,7 +877,7 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast(`✅ Fusionné : ${selected.length} entités → ${allPoints.length} points`, 'success');
   };
- 
+
   const filletCorners = () => {
     const selected = entities.filter(e => e.selected && (e.type === 'path' || e.type === 'line' || e.type === 'rectangle'));
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités à arrondir', 'warning'); return; }
@@ -865,7 +940,7 @@ export function useCADOperations(ctx) {
       showToast(`✅ ${totalRounded} angles arrondis (r=${r}mm)`, 'success');
     });
   };
- 
+
   const mergeToSinglePath = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length < 2) { showToast('⚠️ Sélectionnez au moins 2 entités à fusionner', 'warning'); return; }
@@ -906,11 +981,11 @@ export function useCADOperations(ctx) {
     setEntities(updated); addToHistory(updated);
     showToast(`✅ Fusionné en 1 ${isClosed ? 'contour fermé ✅' : 'contour ouvert'} — ${finalPts.length} points`, 'success');
   };
- 
+
   // ════════════════════════════════════════════════════
   // JOIN & BREAK (Inkscape-style)
   // ════════════════════════════════════════════════════
- 
+
   const breakEntityAtPoint = (data, point) => {
     const entity = recreateEntity(data);
     if (!entity) return [data];
@@ -957,7 +1032,7 @@ export function useCADOperations(ctx) {
     }
     return [data];
   };
- 
+
   const joinSelectedPaths = () => {
     const selected = entities.filter(e => e.selected);
     const openPaths = [];
@@ -990,12 +1065,12 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast(`✅ 2 contours joints (segment de ${best.d.toFixed(1)} mm)`, 'success');
   };
- 
+
   const startBreakAtPoint = () => {
     setBreakMode(true);
     showToast('👉 Cliquez sur le contour à briser', 'info');
   };
- 
+
   const breakAtPoint = (pos) => {
     const idx = entities.findIndex(en => { const ent = recreateEntity(en); return ent && ent.contains(pos, 5 / camera.zoom); });
     if (idx < 0) { showToast('⚠️ Cliquez sur un contour', 'warning'); return; }
@@ -1006,11 +1081,11 @@ export function useCADOperations(ctx) {
     setBreakMode(false);
     showToast(`✅ Contour brisé en ${broken.length} parties`, 'success');
   };
- 
+
   // ════════════════════════════════════════════════════
   // SCISSORS (Inkscape-style: cut between two points)
   // ════════════════════════════════════════════════════
- 
+
   const locateOnEntity = (data, point) => {
     const entity = recreateEntity(data);
     if (!entity) return null;
@@ -1041,7 +1116,7 @@ export function useCADOperations(ctx) {
     }
     return null;
   };
- 
+
   const cutBetweenPoints = (data, locA, locB) => {
     const entity = recreateEntity(data);
     if (!entity) return [data];
@@ -1084,13 +1159,13 @@ export function useCADOperations(ctx) {
     }
     return [data];
   };
- 
+
   const startScissors = () => {
     setScissorsMode(true);
     setScissorsFirst(null);
     showToast('✂ Cliquez le 1er point de coupe sur le contour', 'info');
   };
- 
+
   const scissorsClick = (pos) => {
     const idx = entities.findIndex(en => { const ent = recreateEntity(en); return ent && ent.contains(pos, 5 / camera.zoom); });
     if (idx < 0) { showToast('⚠️ Cliquez sur un contour', 'warning'); return; }
@@ -1109,11 +1184,11 @@ export function useCADOperations(ctx) {
     setScissorsMode(false); setScissorsFirst(null);
     showToast(`✂ Contour coupé en ${pieces.length} partie(s)`, 'success');
   };
- 
+
   // ════════════════════════════════════════════════════
   // UTILITY OPERATIONS
   // ════════════════════════════════════════════════════
- 
+
   const cleanIsolatedPoints = () => {
     const minSize = 0.1;
     const cleaned = entities.filter(data => {
@@ -1134,7 +1209,7 @@ export function useCADOperations(ctx) {
     if (removed === 0) { showToast('✅ Aucun point isolé trouvé', 'success'); }
     else { setEntities(cleaned); addToHistory(cleaned); showToast(`✅ ${removed} point(s) supprimé(s)`, 'success'); }
   };
- 
+
   const normalizePosition = () => {
     if (entities.length === 0) { showToast('⚠️ Aucune entité à normaliser'); return; }
     let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
@@ -1161,7 +1236,7 @@ export function useCADOperations(ctx) {
     setEntities(newEntities); addToHistory(newEntities);
     showToast(`✅ Dessin normalisé ! Dimensions : ${(maxX-minX).toFixed(1)} × ${(maxY-minY).toFixed(1)} mm`, 'success');
   };
- 
+
   const fixJoints = () => {
     const selected = entities.filter(e => e.selected);
     if (selected.length === 0) { showToast('⚠️ Sélectionnez au moins 2 entités à joindre'); return; }
@@ -1196,7 +1271,7 @@ export function useCADOperations(ctx) {
     if (joinCount > 0) { setEntities([...entities]); addToHistory(entities); showToast(`✅ ${joinCount} joint(s) fixé(s) !`); }
     else { showToast('⚠️ Aucun point assez proche (< 2mm)'); }
   };
- 
+
   const explodePath = () => {
     const selected = entities.find(e => e.selected);
     if (!selected) { showToast('⚠️ Sélectionnez une entité à éclater'); return; }
@@ -1209,7 +1284,7 @@ export function useCADOperations(ctx) {
       showToast(`✅ Éclaté en ${lines.length} lignes`);
     } else { showToast('ℹ️ Cette entité ne peut pas être éclatée'); }
   };
- 
+
   const convertTextToPath = async () => {
     const selected = entities.find(e => e.selected);
     if (!selected || selected.type !== 'text') { showToast('⚠️ Sélectionnez un texte à convertir', 'warning'); return; }
@@ -1282,11 +1357,11 @@ export function useCADOperations(ctx) {
       showToast(`❌ ${error.message}`, 'error');
     }
   };
- 
+
   // ════════════════════════════════════════════════════
   // IMPORT / EXPORT
   // ════════════════════════════════════════════════════
- 
+
   const importDXF = (fileContent) => {
     try {
       const result = importDXFModule(fileContent);
@@ -1297,7 +1372,7 @@ export function useCADOperations(ctx) {
       showToast('❌ Erreur lors de l\'import DXF', 'error');
     }
   };
- 
+
   const importTXT = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1315,7 +1390,7 @@ export function useCADOperations(ctx) {
     };
     input.click();
   };
- 
+
   const downloadBlob = (content, filename, mime) => {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -1327,7 +1402,7 @@ export function useCADOperations(ctx) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
- 
+
   const exportDXF = () => {
     const dxf = exportDXFModule(entities);
     if (window.showSaveFilePicker) {
@@ -1353,18 +1428,18 @@ export function useCADOperations(ctx) {
       downloadBlob(dxf, `dessin_${Date.now()}.dxf`, 'application/dxf');
     }
   };
- 
+
   // ═══ Validation avant export (détecte les soucis fréquents avant de découper) ═══
   const validateEntities = (ents) => {
     const warnings = [];
     const CLOSE_GAP_TOLERANCE = 0.5; // mm : écart jugé "presque fermé"
     const TINY_SIZE_TOLERANCE = 0.3; // mm : entité jugée "bruit"
- 
+
     ents.forEach((data, idx) => {
       const entity = recreateEntity(data);
       if (!entity) return;
       const label = `Entité #${idx + 1} (${entity.type})`;
- 
+
       // Chemins ouverts qui semblent en fait fermés (début et fin très proches)
       if (entity.type === 'path' && !entity.closed && entity.points.length >= 3) {
         const gap = distance(entity.points[0], entity.points[entity.points.length - 1]);
@@ -1372,7 +1447,7 @@ export function useCADOperations(ctx) {
           warnings.push(`${label} : presque fermé (écart de ${gap.toFixed(2)} mm) — la pièce risque de ne pas se détacher complètement.`);
         }
       }
- 
+
       // Entités quasi nulles (probablement du bruit issu d'un import ou d'une manipulation)
       if (entity.type === 'line') {
         const len = distance(entity.start, entity.end);
@@ -1381,7 +1456,7 @@ export function useCADOperations(ctx) {
         if (entity.radius < TINY_SIZE_TOLERANCE) warnings.push(`${label} : rayon quasi nul (${entity.radius.toFixed(2)} mm), probablement du bruit.`);
       }
     });
- 
+
     // Doublons exacts (deux entités identiques au même endroit = double découpe au même endroit)
     for (let i = 0; i < ents.length; i++) {
       for (let j = i + 1; j < ents.length; j++) {
@@ -1397,10 +1472,10 @@ export function useCADOperations(ctx) {
         if (same) warnings.push(`Entités #${i + 1} et #${j + 1} semblent identiques et superposées — risque de double passage de découpe.`);
       }
     }
- 
+
     return warnings;
   };
- 
+
   const exportGCode = () => {
     try {
       if (entities.length === 0) { showToast('⚠️ Aucune entité à exporter !'); return; }
@@ -1416,7 +1491,7 @@ export function useCADOperations(ctx) {
       showToast('❌ Erreur lors de l\'export G-code: ' + error.message, 'error');
     }
   };
- 
+
   return {
     createBisector, extendLines, reverseArc, breakAtIntersection,
     mirrorHorizontal, mirrorVertical, arrayRectangular, arrayCircular,
@@ -1424,7 +1499,7 @@ export function useCADOperations(ctx) {
     extractOuterContour, startManualFusion, finishManualFusion,
     fusionLignes, groupLinesIntoPaths, filletCorners, mergeToSinglePath,
     addLeadIns, removeLeadIns, addLeadOuts, removeLeadOuts,
-    sortEntitiesInsideOut, cleanIsolatedPoints, normalizePosition,
+    sortEntitiesInsideOut, optimizeCuttingOrder, cleanIsolatedPoints, normalizePosition,
     fixJoints, explodePath, convertTextToPath,
     importDXF, importTXT, exportDXF, exportGCode,
     setAddingTab, joinSelectedPaths, startBreakAtPoint, breakAtPoint,
