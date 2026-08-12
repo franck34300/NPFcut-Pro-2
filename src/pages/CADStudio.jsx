@@ -793,12 +793,31 @@ export default function CADStudio() {
   const zoomOut = () => setCamera({ ...camera, zoom: Math.max(0.1, camera.zoom / 1.2) });
   const resetView = () => setCamera({ x: 0, y: 0, zoom: 1 });
 
+  // Cadre la vue sur la sélection courante (ou sur tout le dessin s'il n'y a rien de sélectionné)
+  const zoomToSelection = () => {
+    const hasSelection = entities.some(e => e.selected);
+    const bbox = hasSelection ? getSelectionBBox(entities) : getSelectionBBox(entities.map(e => ({ ...e, selected: true })));
+    if (!bbox || bbox.w <= 0 || bbox.h <= 0) {
+      if (!hasSelection) showToast('⚠️ Rien à cadrer', 'warning');
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const margin = 1.25; // 25% de marge autour de la sélection
+    const availW = canvas.offsetWidth / margin;
+    const availH = canvas.offsetHeight / margin;
+    const cx = (bbox.minX + bbox.maxX) / 2;
+    const cy = (bbox.minY + bbox.maxY) / 2;
+    const newZoom = Math.max(0.02, Math.min(20, Math.min(availW / bbox.w, availH / bbox.h)));
+    setCamera({ x: -cx * newZoom, y: -cy * newZoom, zoom: newZoom });
+  };
+
   // ═══ Keyboard shortcuts ═══
   stateRef.current = {
     entities, dialogOpen, operations, historyIndex, history, tool,
     manualFusionMode, setManualFusionMode, setManualFusionPoints, setManualFusionEntities,
     setTempPoints, setTool, setDialogOpen, showToast, setEntities, addToHistory,
-    setBreakMode, setScissorsMode, setScissorsFirst,
+    setBreakMode, setScissorsMode, setScissorsFirst, zoomToSelection,
   };
 
   useEffect(() => {
@@ -827,6 +846,8 @@ export default function CADStudio() {
         e.preventDefault(); s.operations.explodePath();
       } else if ((e.key === 'o' || e.key === 'O') && !e.ctrlKey && !s.dialogOpen && !inInput) {
         e.preventDefault(); s.operations.parallelOffset();
+      } else if ((e.key === 'z' || e.key === 'Z') && !e.ctrlKey && !s.dialogOpen && !inInput) {
+        e.preventDefault(); s.zoomToSelection();
       } else if ((e.key === 'd' || e.key === 'D') && !inInput) {
         e.preventDefault();
         const selected = s.entities.filter(en => en.selected);
@@ -925,6 +946,7 @@ export default function CADStudio() {
             <div>X - Éclater | D - Dupliquer | Suppr - Effacer</div>
             <div>Ctrl+Z - Annuler | Ctrl+Y - Refaire</div>
             <div>Ctrl+B - Briser | Éspace+clic - Pan</div>
+            <div>Z - Cadrer sur la sélection</div>
             <div className="text-cyan-400">Molette - Zoom</div>
           </div>
         </div>
