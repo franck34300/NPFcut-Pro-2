@@ -71,6 +71,59 @@ export default function CADStudio() {
 
   const { history, historyIndex, addToHistory, undo, redo } = useHistory(setEntities);
 
+  // ═══ Sauvegarde automatique locale (localStorage) ═══
+  const AUTOSAVE_KEY = 'npfcut_autosave_v1';
+  const autosaveTimer = useRef(null);
+  const didRestoreOnMount = useRef(false);
+
+  // Au chargement : proposer de restaurer le dernier dessin sauvegardé
+  useEffect(() => {
+    if (didRestoreOnMount.current) return;
+    didRestoreOnMount.current = true;
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.entities) && parsed.entities.length > 0) {
+          const when = parsed.savedAt ? new Date(parsed.savedAt).toLocaleString('fr-FR') : '';
+          const ok = window.confirm(
+            `Un dessin sauvegardé automatiquement a été trouvé${when ? ` (${when})` : ''}.\nVoulez-vous le restaurer ?`
+          );
+          if (ok) {
+            setEntities(parsed.entities);
+            if (typeof parsed.kerfWidth === 'number') setKerfWidth(parsed.kerfWidth);
+            addToHistory(parsed.entities);
+            showToast('✅ Dessin restauré', 'success');
+          }
+        }
+      }
+    } catch (err) {
+      // Sauvegarde corrompue ou illisible : on l'ignore silencieusement
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // À chaque modification des entités : sauvegarder automatiquement (avec un léger délai)
+  useEffect(() => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      try {
+        if (entities.length > 0) {
+          localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+            entities,
+            kerfWidth,
+            savedAt: Date.now(),
+          }));
+        } else {
+          localStorage.removeItem(AUTOSAVE_KEY);
+        }
+      } catch (err) {
+        // Stockage plein ou indisponible : on ignore, ce n'est pas critique
+      }
+    }, 800);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+  }, [entities, kerfWidth]);
+
   const getSelectionBBox = (ents) => {
     const selected = ents.filter(e => e.selected);
     if (selected.length === 0) return null;
