@@ -44,6 +44,13 @@ export default function CADStudio() {
   const [leadOutHandle, setLeadOutHandle] = useState(null);
   const [lastClickTime, setLastClickTime] = useState(0);
   const [showCuttingPath, setShowCuttingPath] = useState(false);
+
+  // Désactive la prévisualisation du parcours dès que le dessin est vidé
+  // (évite d'afficher un "parcours optimisé" trompeur sur un dessin vierge ou nouvellement importé)
+  useEffect(() => {
+    if (entities.length === 0 && showCuttingPath) setShowCuttingPath(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entities.length]);
   const [toast, setToast] = useState(null);
   const [manualFusionMode, setManualFusionMode] = useState(false);
   const [manualFusionPoints, setManualFusionPoints] = useState([]);
