@@ -880,6 +880,79 @@ export function useCADOperations(ctx) {
     showToast(`✅ Fusionné : ${selected.length} entités → ${allPoints.length} points`, 'success');
   };
 
+  // ── Lissage de forme (simplification du bruit + arrondi doux, sans forcer de symétrie) ──
+  const perpendicularDistance = (point, lineStart, lineEnd) => {
+    const dx = lineEnd.x - lineStart.x, dy = lineEnd.y - lineStart.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.0001) return distance(point, lineStart);
+    const t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / (len * len);
+    const proj = { x: lineStart.x + t * dx, y: lineStart.y + t * dy };
+    return distance(point, proj);
+  };
+
+  // Douglas-Peucker : retire les points redondants/bruités tout en gardant la silhouette
+  const simplifyPoints = (points, tolerance) => {
+    if (points.length < 3) return points;
+    let maxDist = 0, maxIdx = 0;
+    for (let i = 1; i < points.length - 1; i++) {
+      const d = perpendicularDistance(points[i], points[0], points[points.length - 1]);
+      if (d > maxDist) { maxDist = d; maxIdx = i; }
+    }
+    if (maxDist > tolerance) {
+      const left = simplifyPoints(points.slice(0, maxIdx + 1), tolerance);
+      const right = simplifyPoints(points.slice(maxIdx), tolerance);
+      return [...left.slice(0, -1), ...right];
+    }
+    return [points[0], points[points.length - 1]];
+  };
+
+  // Chaikin (corner-cutting) : arrondit progressivement une polyligne sans changer sa forme globale
+  const chaikinSmooth = (points, closed, iterations) => {
+    let pts = points;
+    for (let iter = 0; iter < iterations; iter++) {
+      const result = [];
+      const n = pts.length;
+      const segCount = closed ? n : n - 1;
+      if (!closed) result.push(pts[0]);
+      for (let i = 0; i < segCount; i++) {
+        const p0 = pts[i];
+        const p1 = pts[(i + 1) % n];
+        result.push({ x: p0.x + (p1.x - p0.x) * 0.25, y: p0.y + (p1.y - p0.y) * 0.25 });
+        result.push({ x: p0.x + (p1.x - p0.x) * 0.75, y: p0.y + (p1.y - p0.y) * 0.75 });
+      }
+      if (!closed) result.push(pts[pts.length - 1]);
+      pts = result;
+    }
+    return pts;
+  };
+
+  const smoothSelectedShape = () => {
+    const selected = entities.filter(e => e.selected && (e.type === 'path' || e.type === 'freeform'));
+    if (selected.length === 0) { showToast('⚠️ Sélectionnez un contour ou une forme libre à lisser', 'warning'); return; }
+    openDialog('〰️ Lisser la forme', { tolerance: 0.5, passes: 2 }, (values) => {
+      const tolerance = Math.max(0, parseFloat(values.tolerance) || 0);
+      const passes = Math.max(0, Math.min(5, Math.round(values.passes) || 0));
+      setDialogOpen(false);
+      const updated = entities.map(data => {
+        if (!data.selected) return data;
+        if (data.type === 'path') {
+          const closed = !!data.closed;
+          let pts = tolerance > 0 ? simplifyPoints(data.points, tolerance) : data.points;
+          if (passes > 0) pts = chaikinSmooth(pts, closed, passes);
+          return { ...data, points: pts };
+        }
+        if (data.type === 'freeform') {
+          let pts = tolerance > 0 ? simplifyPoints(data.controlPoints, tolerance) : data.controlPoints;
+          if (passes > 0) pts = chaikinSmooth(pts, data.closed !== false, passes);
+          return { ...data, controlPoints: pts };
+        }
+        return data;
+      });
+      setEntities(updated); addToHistory(updated);
+      showToast(`✅ ${selected.length} forme(s) lissée(s)`, 'success');
+    });
+  };
+
   const filletCorners = () => {
     const selected = entities.filter(e => e.selected && (e.type === 'path' || e.type === 'line' || e.type === 'rectangle'));
     if (selected.length === 0) { showToast('⚠️ Sélectionnez des entités à arrondir', 'warning'); return; }
@@ -1503,7 +1576,7 @@ export function useCADOperations(ctx) {
     extractOuterContour, startManualFusion, finishManualFusion,
     fusionLignes, groupLinesIntoPaths, filletCorners, mergeToSinglePath,
     addLeadIns, removeLeadIns, addLeadOuts, removeLeadOuts,
-    sortEntitiesInsideOut, optimizeCuttingOrder, cleanIsolatedPoints, normalizePosition,
+    sortEntitiesInsideOut, optimizeCuttingOrder, smoothSelectedShape, cleanIsolatedPoints, normalizePosition,
     fixJoints, explodePath, convertTextToPath,
     importDXF, importTXT, exportDXF, exportGCode,
     setAddingTab, joinSelectedPaths, startBreakAtPoint, breakAtPoint,
