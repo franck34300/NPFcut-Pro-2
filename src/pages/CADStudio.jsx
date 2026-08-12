@@ -207,6 +207,7 @@ export default function CADStudio() {
     fontCache, setGcodePreview, setAddingTab, tabMode, setTabMode,
     kerfWidth, setBreakMode, camera,
     setScissorsMode, scissorsFirst, setScissorsFirst,
+    setShowCuttingPath,
   });
 
   // ═══ Drawing useEffect ═══
