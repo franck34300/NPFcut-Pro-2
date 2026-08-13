@@ -48,6 +48,7 @@ export default function Toolbar({
         <button onClick={actions.mirrorVertical} className={btnSm('bg-blue-600', 'hover:bg-blue-700')} title="Miroir ↔">↔</button>
         <button onClick={actions.arrayRectangular} className={btnSm('bg-purple-600', 'hover:bg-purple-700')} title="Array grille">⊞</button>
         <button onClick={actions.arrayCircular} className={btnSm('bg-purple-600', 'hover:bg-purple-700')} title="Array circulaire">⭯</button>
+        <button onClick={actions.nestPieces} className={btnSm('bg-indigo-700', 'hover:bg-indigo-600')} title="Imbrication automatique sur une tôle (nesting)">📦 Imbrication</button>
         <button onClick={actions.addTabs} className={btnSm('bg-red-600', 'hover:bg-red-700')} title="Ponts">🔲</button>
         <button onClick={actions.fusionLignes} className={btnSm('bg-cyan-600', 'hover:bg-cyan-700')} title="Fusion Lignes">🔗 L</button>
         <button onClick={actions.startManualFusion} className={btnSm('bg-yellow-600', 'hover:bg-yellow-700')} title="Fusion Manuelle">🔗 M</button>
