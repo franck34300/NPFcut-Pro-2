@@ -13,6 +13,7 @@ import { importDXF as importDXFModule, exportDXF as exportDXFModule } from '@/li
 import { exportGCode as exportGCodeModule } from '@/lib/gcode';
 import { parseMachineTXT } from '@/lib/txtImport';
 import { exportDrawingPDF } from '@/lib/exportPDF';
+import { rotateSelectedEntities } from '@/lib/cad/rotateSelectedEntities';
 
 export function useCADOperations(ctx) {
   const {
@@ -1570,6 +1571,146 @@ export function useCADOperations(ctx) {
     }
   };
 
+  // ════════════════════════════════════════════════════
+  // IMBRICATION (NESTING) — placement automatique sur une tôle
+  // ════════════════════════════════════════════════════
+
+  // Bounding box d'une entité (une pièce = une seule entité ; utiliser "Fusionner en 1 contour"
+  // au préalable si une pièce est composée de plusieurs entités séparées)
+  const getEntityDataBBox = (data) => {
+    const entity = recreateEntity(data);
+    if (!entity) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    if (entity.type === 'line') {
+      minX = Math.min(entity.start.x, entity.end.x); maxX = Math.max(entity.start.x, entity.end.x);
+      minY = Math.min(entity.start.y, entity.end.y); maxY = Math.max(entity.start.y, entity.end.y);
+    } else if (entity.type === 'rectangle') {
+      minX = entity.topLeft.x; minY = entity.topLeft.y;
+      maxX = entity.topLeft.x + entity.width; maxY = entity.topLeft.y + entity.height;
+    } else if (entity.type === 'circle' || entity.type === 'arc') {
+      minX = entity.center.x - entity.radius; maxX = entity.center.x + entity.radius;
+      minY = entity.center.y - entity.radius; maxY = entity.center.y + entity.radius;
+    } else if (entity.type === 'path') {
+      entity.points.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); });
+    } else if (entity.type === 'freeform') {
+      entity.controlPoints.forEach(p => { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); });
+    } else if (entity.type === 'contour') {
+      (entity.entities || []).forEach(sub => {
+        const b = getEntityDataBBox(sub);
+        if (b) { minX = Math.min(minX, b.minX); minY = Math.min(minY, b.minY); maxX = Math.max(maxX, b.maxX); maxY = Math.max(maxY, b.maxY); }
+      });
+    }
+    if (!isFinite(minX)) return null;
+    return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+  };
+
+  // Déplace une copie d'entité de (dx, dy) — mêmes conventions que les autres outils de copie du fichier
+  const translateEntityCopy = (data, dx, dy) => {
+    const copy = JSON.parse(JSON.stringify(data));
+    if (copy.type === 'line') { copy.start.x += dx; copy.start.y += dy; copy.end.x += dx; copy.end.y += dy; }
+    else if (copy.type === 'rectangle') { copy.topLeft.x += dx; copy.topLeft.y += dy; }
+    else if (copy.type === 'circle' || copy.type === 'arc') { copy.center.x += dx; copy.center.y += dy; }
+    else if (copy.type === 'path') { copy.points = copy.points.map(p => ({ x: p.x + dx, y: p.y + dy })); }
+    else if (copy.type === 'text' && copy.position) { copy.position.x += dx; copy.position.y += dy; }
+    else if (copy.type === 'freeform') { copy.controlPoints = copy.controlPoints.map(p => ({ x: p.x + dx, y: p.y + dy })); }
+    else if (copy.type === 'contour') { copy.entities = (copy.entities || []).map(sub => translateEntityCopy(sub, dx, dy)); }
+    if (copy.leadIn) copy.leadIn = { x: copy.leadIn.x + dx, y: copy.leadIn.y + dy };
+    if (copy.leadOut) copy.leadOut = { x: copy.leadOut.x + dx, y: copy.leadOut.y + dy };
+    if (copy.tabs) copy.tabs = copy.tabs.map(t => ({ x: t.x + dx, y: t.y + dy }));
+    return copy;
+  };
+
+  const nestPieces = () => {
+    const selected = entities.filter(e => e.selected);
+    if (selected.length === 0) {
+      showToast('⚠️ Sélectionnez la (ou les) pièce(s) à imbriquer. Une pièce = une seule entité (utilisez "Fusionner en 1 contour" au préalable si besoin).', 'warning');
+      return;
+    }
+
+    const singlePieceMode = selected.length === 1;
+    const baseInputs = { sheetWidth: 600, sheetHeight: 400, spacing: 5 };
+    const inputs = singlePieceMode ? { ...baseInputs, quantity: 10 } : baseInputs;
+
+    openDialog('📦 Imbrication sur la tôle', inputs, (values) => {
+      const sheetW = Math.max(1, parseFloat(values.sheetWidth) || 0);
+      const sheetH = Math.max(1, parseFloat(values.sheetHeight) || 0);
+      const spacing = Math.max(0, parseFloat(values.spacing) || 0);
+      setDialogOpen(false);
+
+      // Constitue la liste des pièces à placer
+      const items = singlePieceMode
+        ? Array.from({ length: Math.max(1, Math.round(values.quantity) || 1) }, () => selected[0])
+        : selected;
+
+      const withBBox = items.map((data, sourceIndex) => ({ data, sourceIndex, bbox: getEntityDataBBox(data) })).filter(it => it.bbox);
+      if (withBBox.length === 0) { showToast('❌ Impossible de calculer les dimensions des pièces sélectionnées', 'error'); return; }
+
+      // Tri du plus grand au plus petit (place les grosses pièces en premier, meilleur remplissage)
+      withBBox.sort((a, b) => Math.max(b.bbox.w, b.bbox.h) - Math.max(a.bbox.w, a.bbox.h));
+
+      // Imbrication par étagères ("shelf packing"), avec test de rotation 90°
+      const placements = [];
+      const unplaced = [];
+      let shelfY = 0, shelfHeight = 0, cursorX = 0;
+
+      withBBox.forEach(item => {
+        const { w, h } = item.bbox;
+        const orientations = [{ w, h, rotated: false }, { w: h, h: w, rotated: true }]
+          .filter(o => o.w <= sheetW + 0.001 && o.h <= sheetH + 0.001);
+        if (orientations.length === 0) { unplaced.push(item); return; }
+
+        // Choisit l'orientation qui rentre dans la largeur restante de l'étagère courante,
+        // en préférant la plus basse (garde l'étagère compacte)
+        let fitting = orientations.filter(o => cursorX + o.w <= sheetW + 0.001);
+        let chosen = null;
+        if (fitting.length > 0) {
+          chosen = fitting.reduce((best, o) => (o.h < best.h ? o : best), fitting[0]);
+        } else {
+          // Ne rentre plus sur cette étagère : on en ouvre une nouvelle
+          const newShelfY = shelfY + shelfHeight + (shelfHeight > 0 ? spacing : 0);
+          const fittingSheet = orientations.filter(o => newShelfY + o.h <= sheetH + 0.001);
+          if (fittingSheet.length === 0) { unplaced.push(item); return; }
+          chosen = fittingSheet.reduce((best, o) => (o.h < best.h ? o : best), fittingSheet[0]);
+          shelfY = newShelfY; shelfHeight = 0; cursorX = 0;
+        }
+
+        placements.push({ ...item, x: cursorX, y: shelfY, rotated: chosen.rotated, w: chosen.w, h: chosen.h });
+        cursorX += chosen.w + spacing;
+        shelfHeight = Math.max(shelfHeight, chosen.h);
+      });
+
+      // Applique les placements : rotation (si besoin) puis translation vers la position calculée
+      const genId = () => Math.random().toString(36).substr(2, 9);
+      const placedEntities = placements.map(p => {
+        let working = JSON.parse(JSON.stringify(p.data));
+        working.id = genId();
+        working.selected = false;
+
+        if (p.rotated) {
+          const center = { x: (p.bbox.minX + p.bbox.maxX) / 2, y: (p.bbox.minY + p.bbox.maxY) / 2 };
+          const rotatedList = rotateSelectedEntities([{ ...working, selected: true }], center, Math.PI / 2);
+          working = { ...rotatedList[0], selected: false };
+        }
+
+        const newBBox = getEntityDataBBox(working);
+        if (!newBBox) return working;
+        const dx = p.x - newBBox.minX;
+        const dy = p.y - newBBox.minY;
+        return translateEntityCopy(working, dx, dy);
+      });
+
+      const idsToRemove = new Set(selected.map(s => s.id));
+      const untouched = entities.filter(e => !idsToRemove.has(e.id));
+      const newEntities = [...untouched, ...placedEntities];
+      setEntities(newEntities);
+      addToHistory(newEntities);
+
+      let message = `✅ ${placements.length} pièce(s) placée(s) sur la tôle (${sheetW}×${sheetH} mm)`;
+      if (unplaced.length > 0) message += `\n⚠️ ${unplaced.length} pièce(s) n'ont pas pu être placées (tôle trop petite).`;
+      showToast(message, unplaced.length > 0 ? 'warning' : 'success');
+    });
+  };
+
   const exportPlanPDF = () => {
     try {
       if (entities.length === 0) { showToast('⚠️ Aucune entité à exporter !', 'warning'); return; }
@@ -1589,7 +1730,7 @@ export function useCADOperations(ctx) {
     addLeadIns, removeLeadIns, addLeadOuts, removeLeadOuts,
     sortEntitiesInsideOut, optimizeCuttingOrder, smoothSelectedShape, cleanIsolatedPoints, normalizePosition,
     fixJoints, explodePath, convertTextToPath,
-    importDXF, importTXT, exportDXF, exportGCode, exportPlanPDF,
+    importDXF, importTXT, exportDXF, exportGCode, exportPlanPDF, nestPieces,
     setAddingTab, joinSelectedPaths, startBreakAtPoint, breakAtPoint,
     startScissors, scissorsClick,
   };
