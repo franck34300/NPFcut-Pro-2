@@ -1,6 +1,6 @@
 import {
   Move, Maximize2, Minus, Plus, Square, Circle as CircleIcon,
-  Grid, Download, Upload, Save, Undo2, Redo2, Scissors, Play, BookOpen,
+  Grid, Download, Upload, Save, Undo2, Redo2, Scissors, Play, BookOpen, FileDown,
 } from 'lucide-react';
 import { generateManual } from '@/lib/generateManual';
 
@@ -116,6 +116,7 @@ export default function Toolbar({
         <button onClick={actions.exportDXF} className="px-3 py-2 bg-green-700 hover:bg-green-600 text-white rounded font-bold transition-colors text-xs flex items-center gap-1" title="Enregistrer sous (DXF)"><Save size={14} /> Enregistrer sous</button>
         <button onClick={actions.normalizePosition} className={btnSm('bg-green-700', 'hover:bg-green-600')} title="Normaliser position">📍</button>
         <button onClick={actions.exportGCode} className="px-3 py-2 bg-zinc-800 text-zinc-400 rounded hover:bg-zinc-700 transition-colors font-bold text-xs" title="Exporter G-code">G</button>
+        <button onClick={actions.exportPlanPDF} className="px-3 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded font-bold transition-colors text-xs flex items-center gap-1" title="Exporter le plan en PDF avec cotes"><FileDown size={14} /> PDF</button>
         <button onClick={() => generateManual()} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold transition-colors text-xs flex items-center gap-1" title="Télécharger le manuel d'utilisation (PDF)"><BookOpen size={14} /> Manuel</button>
         <button onClick={() => window.open('https://ko-fi.com/npfcutpro', '_blank', 'noopener,noreferrer')} className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-zinc-900 rounded font-bold transition-colors text-xs shadow-lg" title="Soutenir NPFCut Pro">☕ Don</button>
       </div>
