@@ -22,6 +22,10 @@ const labelMap = {
   startAngle: 'Angle départ (°)',
   tolerance: 'Tolérance de simplification (mm)',
   passes: 'Passes de lissage (0-5)',
+  sheetWidth: 'Largeur de la tôle (mm)',
+  sheetHeight: 'Hauteur de la tôle (mm)',
+  spacing: 'Espacement entre pièces (mm)',
+  quantity: 'Nombre de copies',
 };
 
 export default function Dialog({
