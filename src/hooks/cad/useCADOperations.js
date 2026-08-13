@@ -12,6 +12,7 @@ import { FONT_URLS, DEFAULT_FONT_URL } from '@/lib/fonts';
 import { importDXF as importDXFModule, exportDXF as exportDXFModule } from '@/lib/dxf';
 import { exportGCode as exportGCodeModule } from '@/lib/gcode';
 import { parseMachineTXT } from '@/lib/txtImport';
+import { exportDrawingPDF } from '@/lib/exportPDF';
 
 export function useCADOperations(ctx) {
   const {
@@ -1569,6 +1570,16 @@ export function useCADOperations(ctx) {
     }
   };
 
+  const exportPlanPDF = () => {
+    try {
+      if (entities.length === 0) { showToast('⚠️ Aucune entité à exporter !', 'warning'); return; }
+      exportDrawingPDF(entities);
+      showToast('✅ Plan PDF téléchargé !', 'success');
+    } catch (error) {
+      showToast('❌ Erreur lors de l\'export PDF: ' + error.message, 'error');
+    }
+  };
+
   return {
     createBisector, extendLines, reverseArc, breakAtIntersection,
     mirrorHorizontal, mirrorVertical, arrayRectangular, arrayCircular,
@@ -1578,7 +1589,7 @@ export function useCADOperations(ctx) {
     addLeadIns, removeLeadIns, addLeadOuts, removeLeadOuts,
     sortEntitiesInsideOut, optimizeCuttingOrder, smoothSelectedShape, cleanIsolatedPoints, normalizePosition,
     fixJoints, explodePath, convertTextToPath,
-    importDXF, importTXT, exportDXF, exportGCode,
+    importDXF, importTXT, exportDXF, exportGCode, exportPlanPDF,
     setAddingTab, joinSelectedPaths, startBreakAtPoint, breakAtPoint,
     startScissors, scissorsClick,
   };
