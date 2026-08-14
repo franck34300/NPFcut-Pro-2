@@ -36,6 +36,26 @@ export function rotateSelectedEntities(ents, center, angleDelta) {
       entity.position = rotatePoint(entity.position);
     } else if (entity.type === 'freeform') {
       entity.controlPoints = entity.controlPoints.map(rotatePoint);
+    } else if (entity.type === 'contour') {
+      entity.entities = (entity.entities || []).map(sub => {
+        const subEntity = recreateEntity(sub);
+        if (!subEntity) return sub;
+        if (subEntity.type === 'line') {
+          subEntity.start = rotatePoint(subEntity.start);
+          subEntity.end = rotatePoint(subEntity.end);
+        } else if (subEntity.type === 'circle') {
+          subEntity.center = rotatePoint(subEntity.center);
+        } else if (subEntity.type === 'arc') {
+          subEntity.center = rotatePoint(subEntity.center);
+          subEntity.startAngle += angleDelta;
+          subEntity.endAngle += angleDelta;
+        } else if (subEntity.type === 'path') {
+          subEntity.points = subEntity.points.map(rotatePoint);
+        } else if (subEntity.type === 'freeform') {
+          subEntity.controlPoints = subEntity.controlPoints.map(rotatePoint);
+        }
+        return JSON.parse(JSON.stringify(subEntity));
+      });
     }
 
     return JSON.parse(JSON.stringify(entity));
