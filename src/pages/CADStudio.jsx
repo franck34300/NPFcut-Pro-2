@@ -940,7 +940,7 @@ export default function CADStudio() {
         />
 
         <div className="absolute top-4 left-4 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-lg p-3 text-xs text-zinc-300 font-mono">
-          <div className="font-bold text-cyan-400 mb-2">NPFCut Pro</div>
+          <div className="font-bold text-cyan-400 mb-2">NPFCut Pro v2</div>
           <div>Outil: <span className="text-yellow-400">{tool}</span></div>
           <div>Grille: {gridSize} mm</div>
           <div>Zoom: <span className="text-green-400">{Math.round(camera.zoom * 100)}%</span></div>

@@ -96,7 +96,7 @@ export function generateManual() {
   doc.setTextColor(255, 255, 255);
   doc.setFont(`helvetica`, `bold`);
   doc.setFontSize(42);
-  doc.text(`NPFCut Pro`, pageW / 2, pageH / 2 - 40, { align: 'center' });
+  doc.text(`NPFCut Pro v2`, pageW / 2, pageH / 2 - 40, { align: 'center' });
   doc.setFontSize(16);
   doc.setFont(`helvetica`, `normal`);
   doc.text(`Logiciel CAD/CAM pour découpe CNC`, pageW / 2, pageH / 2, { align: 'center' });
@@ -138,7 +138,7 @@ export function generateManual() {
   doc.addPage();
   y = margin;
   heading(`1. Présentation générale`);
-  body(`NPFCut Pro est un logiciel CAD/CAM fonctionnant dans le navigateur, conçu pour générer du G-code optimisé pour les machines de découpe CNC (plasma, laser, jet d'eau, routeur). Il permet de dessiner, importer, modifier et préparer des contours de découpe, puis d'exporter un G-code prêt à l'emploi.`);
+  body(`NPFCut Pro v2 est un logiciel CAD/CAM fonctionnant dans le navigateur, conçu pour générer du G-code optimisé pour les machines de découpe CNC (plasma, laser, jet d'eau, routeur). Il permet de dessiner, importer, modifier et préparer des contours de découpe, puis d'exporter un G-code prêt à l'emploi.`);
   subheading(`Fonctionnalités principales`);
   bullet(`Dessin 2D`, `lignes, rectangles, cercles, arcs, texte, formes libres.`);
   bullet(`Import DXF`, `récupération de dessins depuis Inkscape, AutoCAD, etc.`);
@@ -348,7 +348,7 @@ export function generateManual() {
   doc.setFont(`helvetica`, `italic`);
   doc.setFontSize(9);
   doc.setTextColor(...colors.muted);
-  doc.text(`NPFCut Pro — Manuel d'utilisation généré automatiquement.`, margin, y);
+  doc.text(`NPFCut Pro v2 — Manuel d'utilisation généré automatiquement.`, margin, y);
   y += 12;
   doc.text(`Pour toute question ou suggestion, utilisez le bouton Don (☕) dans la barre d'outils.`, margin, y);
 
