@@ -1620,96 +1620,6 @@ export function useCADOperations(ctx) {
     return copy;
   };
 
-  const nestPieces = () => {
-    const selected = entities.filter(e => e.selected);
-    if (selected.length === 0) {
-      showToast('⚠️ Sélectionnez la (ou les) pièce(s) à imbriquer. Une pièce = une seule entité (utilisez "Fusionner en 1 contour" au préalable si besoin).', 'warning');
-      return;
-    }
-
-    const singlePieceMode = selected.length === 1;
-    const baseInputs = { sheetWidth: 600, sheetHeight: 400, spacing: 5 };
-    const inputs = singlePieceMode ? { ...baseInputs, quantity: 10 } : baseInputs;
-
-    openDialog('📦 Imbrication sur la tôle', inputs, (values) => {
-      const sheetW = Math.max(1, parseFloat(values.sheetWidth) || 0);
-      const sheetH = Math.max(1, parseFloat(values.sheetHeight) || 0);
-      const spacing = Math.max(0, parseFloat(values.spacing) || 0);
-      setDialogOpen(false);
-
-      // Constitue la liste des pièces à placer
-      const items = singlePieceMode
-        ? Array.from({ length: Math.max(1, Math.round(values.quantity) || 1) }, () => selected[0])
-        : selected;
-
-      const withBBox = items.map((data, sourceIndex) => ({ data, sourceIndex, bbox: getEntityDataBBox(data) })).filter(it => it.bbox);
-      if (withBBox.length === 0) { showToast('❌ Impossible de calculer les dimensions des pièces sélectionnées', 'error'); return; }
-
-      // Tri du plus grand au plus petit (place les grosses pièces en premier, meilleur remplissage)
-      withBBox.sort((a, b) => Math.max(b.bbox.w, b.bbox.h) - Math.max(a.bbox.w, a.bbox.h));
-
-      // Imbrication par étagères ("shelf packing"), avec test de rotation 90°
-      const placements = [];
-      const unplaced = [];
-      let shelfY = 0, shelfHeight = 0, cursorX = 0;
-
-      withBBox.forEach(item => {
-        const { w, h } = item.bbox;
-        const orientations = [{ w, h, rotated: false }, { w: h, h: w, rotated: true }]
-          .filter(o => o.w <= sheetW + 0.001 && o.h <= sheetH + 0.001);
-        if (orientations.length === 0) { unplaced.push(item); return; }
-
-        // Choisit l'orientation qui rentre dans la largeur restante de l'étagère courante,
-        // en préférant la plus basse (garde l'étagère compacte)
-        let fitting = orientations.filter(o => cursorX + o.w <= sheetW + 0.001);
-        let chosen = null;
-        if (fitting.length > 0) {
-          chosen = fitting.reduce((best, o) => (o.h < best.h ? o : best), fitting[0]);
-        } else {
-          // Ne rentre plus sur cette étagère : on en ouvre une nouvelle
-          const newShelfY = shelfY + shelfHeight + (shelfHeight > 0 ? spacing : 0);
-          const fittingSheet = orientations.filter(o => newShelfY + o.h <= sheetH + 0.001);
-          if (fittingSheet.length === 0) { unplaced.push(item); return; }
-          chosen = fittingSheet.reduce((best, o) => (o.h < best.h ? o : best), fittingSheet[0]);
-          shelfY = newShelfY; shelfHeight = 0; cursorX = 0;
-        }
-
-        placements.push({ ...item, x: cursorX, y: shelfY, rotated: chosen.rotated, w: chosen.w, h: chosen.h });
-        cursorX += chosen.w + spacing;
-        shelfHeight = Math.max(shelfHeight, chosen.h);
-      });
-
-      // Applique les placements : rotation (si besoin) puis translation vers la position calculée
-      const genId = () => Math.random().toString(36).substr(2, 9);
-      const placedEntities = placements.map(p => {
-        let working = JSON.parse(JSON.stringify(p.data));
-        working.id = genId();
-        working.selected = false;
-
-        if (p.rotated) {
-          const center = { x: (p.bbox.minX + p.bbox.maxX) / 2, y: (p.bbox.minY + p.bbox.maxY) / 2 };
-          const rotatedList = rotateSelectedEntities([{ ...working, selected: true }], center, Math.PI / 2);
-          working = { ...rotatedList[0], selected: false };
-        }
-
-        const newBBox = getEntityDataBBox(working);
-        if (!newBBox) return working;
-        const dx = p.x - newBBox.minX;
-        const dy = p.y - newBBox.minY;
-        return translateEntityCopy(working, dx, dy);
-      });
-
-      const idsToRemove = new Set(selected.map(s => s.id));
-      const untouched = entities.filter(e => !idsToRemove.has(e.id));
-      const newEntities = [...untouched, ...placedEntities];
-      setEntities(newEntities);
-      addToHistory(newEntities);
-
-      let message = `✅ ${placements.length} pièce(s) placée(s) sur la tôle (${sheetW}×${sheetH} mm)`;
-      if (unplaced.length > 0) message += `\n⚠️ ${unplaced.length} pièce(s) n'ont pas pu être placées (tôle trop petite).`;
-      showToast(message, unplaced.length > 0 ? 'warning' : 'success');
-    });
-  };
 
   const exportPlanPDF = () => {
     try {
@@ -1730,7 +1640,7 @@ export function useCADOperations(ctx) {
     addLeadIns, removeLeadIns, addLeadOuts, removeLeadOuts,
     sortEntitiesInsideOut, optimizeCuttingOrder, smoothSelectedShape, cleanIsolatedPoints, normalizePosition,
     fixJoints, explodePath, convertTextToPath,
-    importDXF, importTXT, exportDXF, exportGCode, exportPlanPDF, nestPieces,
+    importDXF, importTXT, exportDXF, exportGCode, exportPlanPDF,
     setAddingTab, joinSelectedPaths, startBreakAtPoint, breakAtPoint,
     startScissors, scissorsClick,
   };
